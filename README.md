@@ -43,4 +43,5 @@ MIT
 8) Deploy on GCP
 9) deploy on Asure
 10) setup TF to deply servers on any cloud
-11) ccreate simple Python SDK for client apps. 
+11) create simple Python SDK for client apps. 
+12) create MTLS auth scheme for clients
