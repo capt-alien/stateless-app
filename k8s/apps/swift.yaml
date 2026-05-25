@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swift-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swift-server
+  template:
+    metadata:
+      labels:
+        app: swift-server
+    spec:
+      containers:
+        - name: swift-server
+          image: 658310026229.dkr.ecr.us-west-2.amazonaws.com/swift-server:latest
+          ports:
+            - containerPort: 8081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swift-server
+spec:
+  selector:
+    app: swift-server
+  ports:
+    - port: 8081
+      targetPort: 8081

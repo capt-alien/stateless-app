@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:stateless-app}/services/swift",
+            "name": "Debug swift-server (services/swift)",
+            "target": "swift-server",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug swift-server (services/swift)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:stateless-app}/services/swift",
+            "name": "Release swift-server (services/swift)",
+            "target": "swift-server",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release swift-server (services/swift)"
+        }
+    ]
+}

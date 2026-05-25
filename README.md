@@ -34,9 +34,11 @@ MIT
 
 ## TODO
 
-1. Build a Swift client and Swift server
-2. Configure Envoy to route to each service based on client type
-3. Scale the service to handle 10K requests/second
-4. Build a load-testing setup that can generate 10K requests/second
-5. Add an autoscaling solution
-6. Deploy to AWS, Azure, and GCP with one command using Terraform/OpenTofu and Ansible
+1. Add Envoy as a routing layer in front of all services
+2. Configure path-based routing (/go, /swift, /python)
+3. Add API key authentication at the Envoy layer
+4. Route traffic based on headers (e.g. X-Service)
+5. Scale the service to handle 10K requests/second
+6. Build a load-testing setup that can generate 10K requests/second
+7. Add an autoscaling solution
+8. Deploy to AWS, Azure, and GCP with one command using Terraform/OpenTofu and Ansible
