@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: go-server
-          image: 658310026229.dkr.ecr.us-west-2.amazonaws.com/stateless-app:latest
+          image: go-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
 ---

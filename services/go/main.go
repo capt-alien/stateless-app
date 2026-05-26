@@ -7,10 +7,15 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"stateless-app/services/go/metrics"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+
+	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
 
 	hostname, _ := os.Hostname()
 	name := r.URL.Query().Get("name")
@@ -19,6 +24,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	clientIP := r.RemoteAddr
 	log.Println("request from:", clientIP)
+
 	resp := map[string]string{
 		"status":    "ok",
 		"message":   "hello " + name,
@@ -27,28 +33,34 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		"method":    r.Method,
 		"client_ip": clientIP,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-
 }
-
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 
+	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
+
 	clientIP := r.RemoteAddr
 	route := r.URL.Path
+
 	log.Printf("health check from %s to %s", clientIP, route)
+
 	resp := map[string]string{
 		"status": "healthy",
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resp)
 
+	json.NewEncoder(w).Encode(resp)
 }
 
-
 func fibHandler(w http.ResponseWriter, r *http.Request) {
+
+	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
+
 	n := 35
 
 	if nStr := r.URL.Query().Get("n"); nStr != "" {
@@ -67,8 +79,11 @@ func fibHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start := time.Now()
+
 	result := fib(n)
+
 	duration := time.Since(start)
+
 	log.Printf("fib request n=%d duration=%s", n, duration)
 
 	resp := map[string]any{
@@ -80,9 +95,9 @@ func fibHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	json.NewEncoder(w).Encode(resp)
 }
-
 
 func fib(n int) int {
 	if n <= 1 {
@@ -91,11 +106,17 @@ func fib(n int) int {
 	return fib(n-1) + fib(n-2)
 }
 
-
 func main() {
+
+	metrics.Init()
+
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/fib", fibHandler)
-	log.Println("starting stateless-app on :8080")
+
+	http.Handle("/metrics", promhttp.Handler())
+
+	log.Println("starting go-server on :8080")
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
