@@ -25,6 +25,25 @@ status-local:
 	kubectl get pods
 	kubectl get svc
 
+logs-local:
+	kubectl logs -f deployment/go-server
+
+metrics-local:
+	curl localhost:8080/go/metrics
+	curl localhost:8080/swift/metrics
+
+test-local:
+	curl localhost:8080/go
+	curl localhost:8080/go
+	curl localhost:8080/swift
+	curl localhost:8080/swift
+	curl "localhost:8080/go/fib?n=10"
+	curl "localhost:8080/swift/fib?n=10"
+	@echo "\n--- Go Metrics ---"
+	curl localhost:8080/go/metrics
+	@echo "\n--- Swift Metrics ---"
+	curl localhost:8080/swift/metrics
+
 
 up-aws:
 	tofu apply
