@@ -1,5 +1,14 @@
 CLUSTER_NAME=migration-lab
 
+#setup
+env-set:
+	cp templates/sample.env .env
+
+connect-local: 
+	forward-local
+
+#Local Deployment
+
 up-local:
 	docker build -t go-server:latest -f services/go/Dockerfile .
 	docker build -t swift-server:latest ./services/swift
@@ -18,8 +27,6 @@ down-local:
 
 forward-local:
 	kubectl port-forward svc/envoy-lb 8080:80
-
-connect-local: forward-local
 
 status-local:
 	kubectl get pods
