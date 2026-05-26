@@ -110,11 +110,12 @@ func main() {
 
 	metrics.Init()
 
-	http.HandleFunc("/", homeHandler)
+	http.Handle("/metrics", promhttp.Handler())
+
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/fib", fibHandler)
 
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/", homeHandler)
 
 	log.Println("starting go-server on :8080")
 
