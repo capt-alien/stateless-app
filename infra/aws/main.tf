@@ -17,3 +17,14 @@ resource "aws_ecr_repository" "swift_service" {
     scan_on_push = true
   }
 }
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}

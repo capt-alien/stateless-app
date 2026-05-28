@@ -1,13 +1,14 @@
 CLUSTER_NAME=migration-lab
 
-#setup
+# Setup
+
 env-set:
 	cp templates/sample.env .env
 
-connect-local: 
-	forward-local
+connect-local:
+	$(MAKE) forward-local
 
-#Local Deployment
+# Local Deployment
 
 up-local:
 	docker build -t go-server:latest -f services/go/Dockerfile .
@@ -26,7 +27,7 @@ down-local:
 	kubectl delete -k k8s/base
 
 forward-local:
-	kubectl port-forward svc/envoy-lb 8080:80
+	kubectl port-forward --address 0.0.0.0 svc/envoy-lb 8080:80
 
 status-local:
 	kubectl get pods
@@ -51,16 +52,44 @@ test-local:
 	@echo "\n--- Swift Metrics ---"
 	curl localhost:8080/swift/metrics
 
+# AWS Deployment
+
+plan-aws:
+	cd infra/aws && tofu plan
 
 up-aws:
-	tofu apply
+	cd infra/aws && tofu apply
 
 down-aws:
-	tofu destroy
+	cd infra/aws && tofu destroy
 
+status-aws:
+	kubectl get nodes
+	kubectl get pods -A
+
+outputs-aws:
+	cd infra/aws && tofu output
+
+# GCP Deployment
 
 up-gcp:
 	echo "TODO"
 
 down-gcp:
 	echo "TODO"
+
+
+
+context-local:
+	kubectl config use-context kind-$(CLUSTER_NAME)
+
+context-aws:
+	kubectl config use-context stateless-app-aws
+
+pods-local: context-local
+	kubectl get pods
+	kubectl get svc
+
+pods-aws: context-aws
+	kubectl get pods
+	kubectl get svc
