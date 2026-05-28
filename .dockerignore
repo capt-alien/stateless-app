@@ -4,3 +4,13 @@
 **/.swiftpm
 node_modules
 .DS_Store
+
+infra/aws/.terraform
+**/.terraform
+*.tfstate
+*.tfstate.*
+
+.env
+*.env
+
+generated
