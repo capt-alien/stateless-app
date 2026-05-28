@@ -1,2 +1,7 @@
 stateless
+.env.terraform/
+.env.terraform/
+.env**/.terraform/
+**.env
 .env
+**/.terraform/
