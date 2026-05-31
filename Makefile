@@ -63,8 +63,25 @@ plan-aws:
 
 up-aws:
 	cd infra/aws && tofu apply
+	aws eks update-kubeconfig \
+		--region us-west-2 \
+		--name stateless-app-eks \
+		--alias stateless-app-aws
 
-down-aws:
+deploy-aws: context-aws
+	kubectl apply -k k8s/overlays/aws
+	kubectl rollout status deployment/go-server
+	kubectl rollout status deployment/swift-server
+	kubectl rollout status deployment/envoy
+	kubectl get pods
+	kubectl get svc
+
+dns-aws: context-aws
+	$(eval AWS_LB_HOSTNAME := $(shell kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'))
+	@test -n "$(AWS_LB_HOSTNAME)" || (echo "ERROR: envoy-lb hostname not found" && exit 1)
+	cd infra/aws && TF_VAR_aws_lb_hostname="$(AWS_LB_HOSTNAME)" tofu apply
+
+down-aws: context-aws
 	cd infra/aws && tofu destroy \
 		-target=aws_eks_node_group.stateless_app \
 		-target=aws_eks_cluster.stateless_app
@@ -75,6 +92,11 @@ status-aws: context-aws
 
 outputs-aws:
 	cd infra/aws && tofu output
+
+context-aws:
+	kubectl config use-context stateless-app-aws
+
+
 
 # GCP Deployment
 

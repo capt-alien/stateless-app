@@ -20,3 +20,9 @@ variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "aws_lb_hostname" {
+  description = "Current AWS LoadBalancer hostname for stateless app"
+  type        = string
+  default     = ""
+}
