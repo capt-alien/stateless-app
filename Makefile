@@ -1,6 +1,10 @@
-CLUSTER_NAME=migration-lab
-
 # Setup
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
+CLUSTER_NAME ?= migration-lab
 
 env-set:
 	cp templates/sample.env .env
@@ -61,9 +65,11 @@ up-aws:
 	cd infra/aws && tofu apply
 
 down-aws:
-	cd infra/aws && tofu destroy
+	cd infra/aws && tofu destroy \
+		-target=aws_eks_node_group.stateless_app \
+		-target=aws_eks_cluster.stateless_app
 
-status-aws:
+status-aws: context-aws
 	kubectl get nodes
 	kubectl get pods -A
 
