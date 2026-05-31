@@ -8,6 +8,10 @@ resource "aws_ecr_repository" "go_service" {
   image_scanning_configuration {
     scan_on_push = true
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecr_repository" "swift_service" {
@@ -15,6 +19,10 @@ resource "aws_ecr_repository" "swift_service" {
 
   image_scanning_configuration {
     scan_on_push = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
