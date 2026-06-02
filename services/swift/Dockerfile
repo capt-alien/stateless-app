@@ -8,7 +8,7 @@ COPY Sources ./Sources
 
 RUN swift build -c release
 
-FROM swift:6.1-jammy
+FROM swift:6.1-jammy-slim
 
 WORKDIR /app
 

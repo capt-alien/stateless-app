@@ -12,8 +12,8 @@ env-set:
 connect-local:
 	$(MAKE) forward-local
 
+###################################################
 # Local Deployment
-
 up-local:
 	docker build -t go-server:latest -f services/go/Dockerfile .
 	docker build -t swift-server:latest ./services/swift
@@ -56,8 +56,16 @@ test-local:
 	@echo "\n--- Swift Metrics ---"
 	curl localhost:8080/swift/metrics
 
-# AWS Deployment
+pods-local: context-local
+	kubectl get pods
+	kubectl get svc
 
+pods-aws: context-aws
+	kubectl get pods
+	kubectl get svc
+
+###################################################
+# AWS Deployment
 plan-aws:
 	cd infra/aws && tofu plan
 
@@ -97,15 +105,43 @@ context-aws:
 	kubectl config use-context stateless-app-aws
 
 
-
+###################################################
 # GCP Deployment
+plan-gcp:
+	cd infra/gcp && tofu plan
 
 up-gcp:
-	echo "TODO"
+	cd infra/gcp && tofu apply
+	gcloud container clusters get-credentials stateless-app-gke \
+		--zone us-west1-a \
+		--project stateless-app-498021
+	kubectl config rename-context \
+		gke_stateless-app-498021_us-west1-a_stateless-app-gke \
+		stateless-app-gcp || true
+	kubectl config use-context stateless-app-gcp
 
-down-gcp:
-	echo "TODO"
+deploy-gcp: context-gcp
+	kubectl apply -k k8s/overlays/gcp
+	kubectl rollout status deployment/go-server
+	kubectl rollout status deployment/swift-server
+	kubectl rollout status deployment/envoy
+	kubectl get pods
+	kubectl get svc
 
+down-gcp: context-gcp
+	cd infra/gcp && tofu destroy \
+		-target=google_container_node_pool.primary_nodes \
+		-target=google_container_cluster.primary
+
+status-gcp: context-gcp
+	kubectl get nodes
+	kubectl get pods -A
+
+outputs-gcp:
+	cd infra/gcp && tofu output
+
+context-gcp:
+	kubectl config use-context stateless-app-gcp
 
 
 context-local:
@@ -113,11 +149,3 @@ context-local:
 
 context-aws:
 	kubectl config use-context stateless-app-aws
-
-pods-local: context-local
-	kubectl get pods
-	kubectl get svc
-
-pods-aws: context-aws
-	kubectl get pods
-	kubectl get svc
