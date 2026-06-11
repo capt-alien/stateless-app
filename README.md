@@ -1,278 +1,353 @@
-# stateless-app
+# Stateless App
 
-`stateless-app` is a multi-service migration and observability lab designed to test application portability across local Kubernetes, AWS, and GCP environments.
+A cloud-native platform engineering project demonstrating multi-language services deployed to Kubernetes using OpenTofu, Envoy, Cloudflare DNS, and managed cloud infrastructure.
 
-The project currently contains:
+## Live Environment
 
-- Go HTTP service
-- Swift HTTP service
-- Envoy proxy for routing
-- Prometheus-compatible metrics
-- Kubernetes deployment manifests
-- Multi-language load clients
-- External monitoring integration (Prometheus/Grafana on `ub1`)
+### GCP Deployment
+
+Platform:
+- Google Kubernetes Engine (GKE)
+- Envoy Proxy
+- Cloudflare DNS
+- OpenTofu Infrastructure as Code
+
+URL:
+- http://gcp.captalien.io
+
+### Endpoints
+
+Go Service:
+- http://gcp.captalien.io/go
+- http://gcp.captalien.io/go/fib?n=10
+- http://gcp.captalien.io/go/metrics
+
+Swift Service:
+- http://gcp.captalien.io/swift
+- http://gcp.captalien.io/swift/fib?n=10
+- http://gcp.captalien.io/swift/metrics
 
 ---
 
 ## Architecture
 
-Clients
-├── Go
-├── Python
-└── Swift
-        │
-        ▼
-     Envoy
-        │
- ┌──────┴──────┐
- │             │
- ▼             ▼
-Go Service   Swift Service
-        │
-        ▼
-Prometheus Metrics
-        │
-        ▼
-ub1 Monitoring Stack
-(Prometheus + Grafana)
+Internet
+    |
+    v
+Cloudflare DNS
+    |
+    v
+GCP Load Balancer
+    |
+    v
+Envoy Proxy
+    ├── /go     → Go Service
+    └── /swift  → Swift Service
 
----
-
-## Features
-
-### Go Service
-
-Routes:
-
-- /
-- /health
-- /fib?n=10
-- /metrics
-
-Features:
-
-- JSON API responses
-- Request logging
-- Fibonacci CPU workload endpoint
-- Prometheus metrics
-
----
-
-### Swift Service
-
-Routes:
-
-- /
-- /health
-- /fib?n=10
-- /metrics
-
-Features:
-
-- Vapor-based API
-- Prometheus metrics
-- Migration target testing
-
----
-
-### Envoy
-
-Routes traffic using path-based routing:
-
-/go            → Go service
-/go/metrics    → Go metrics
-
-/swift         → Swift service
-/swift/metrics → Swift metrics
+Components:
+- Go HTTP service
+- Swift HTTP service
+- Envoy reverse proxy
+- Kubernetes
+- OpenTofu
+- Cloudflare DNS
+- Prometheus metrics endpoints
 
 ---
 
 ## Repository Layout
-
-stateless-app/
 
 clients/
 ├── go/
 ├── python/
 └── swift/
 
-services/
-├── go/
-│   ├── Dockerfile
-│   ├── main.go
-│   └── metrics/
-│
-├── python/
-│
-└── swift/
-    ├── Dockerfile
-    └── Sources/
+infra/
+├── aws/
+└── gcp/
 
 k8s/
-└── base/
-    ├── go.yaml
-    ├── swift.yaml
-    ├── envoy.yaml
-    ├── envoy-config.yaml
-    └── kustomization.yaml
+├── base/
+└── overlays/
 
-templates/
-└── sample.env
+monitoring/
 
----
-
-## Requirements
-
-Local development:
-
-- Docker
-- kind
-- kubectl
-- Make
-- Python 3
-- OpenTofu (future AWS/GCP deployment)
+services/
+├── go/
+├── python/
+└── swift/
 
 ---
 
-## Configuration
+## Environment Setup
 
 Create local environment file:
 
-cp templates/sample.env .env
-
-Example:
-
-APP_HOST=<local_host>
-
-PROM_HOST=<monitoring_host>
-PROM_PORT=9090
-
-GRAFANA_HOST=<grafana_host>
-GRAFANA_PORT=3000
-
-`.env` is ignored by git.
+make env-set
 
 ---
 
-## Local Deployment
+## Local Kubernetes Deployment
 
-Create local cluster:
+Deploy services:
 
 make up-local
 
-Forward Envoy:
+Port-forward Envoy:
 
 make forward-local
 
-Check status:
-
-make status-local
-
-Run test workload:
+Test services:
 
 make test-local
 
-Remove deployment:
+View status:
+
+make status-local
+
+View logs:
+
+make logs-local
+
+View metrics:
+
+make metrics-local
+
+Destroy deployment:
 
 make down-local
 
 ---
 
-## Testing
+## Kubernetes Context Management
 
-Go:
+Switch to local Kind cluster:
 
-curl localhost:8080/go
-curl localhost:8080/go/health
-curl "localhost:8080/go/fib?n=10"
-curl localhost:8080/go/metrics
+make context-local
 
-Swift:
+Switch to AWS cluster:
 
-curl localhost:8080/swift
-curl localhost:8080/swift/health
-curl "localhost:8080/swift/fib?n=10"
-curl localhost:8080/swift/metrics
+make context-aws
+
+Switch to GCP cluster:
+
+make context-gcp
 
 ---
 
-## Monitoring
+## AWS Deployment
 
-Monitoring currently runs externally on `ub1`.
+Plan infrastructure:
 
-Components:
+make plan-aws
 
-- Prometheus
-- Grafana
+Create infrastructure:
 
-Metrics:
-
-go_requests_total
-swift_requests_total
-
-Future work will automate monitoring configuration generation.
-
----
-
-## Future Cloud Targets
-
-Planned deployment targets:
-
-make up-local
 make up-aws
+
+Deploy workloads:
+
+make deploy-aws
+
+Configure DNS:
+
+make dns-aws
+
+View cluster status:
+
+make status-aws
+
+View pods and services:
+
+make pods-aws
+
+View Terraform outputs:
+
+make outputs-aws
+
+Destroy infrastructure:
+
+make down-aws
+
+---
+
+## GCP Deployment
+
+Plan infrastructure:
+
+make plan-gcp
+
+Create infrastructure:
+
 make up-gcp
 
-Goal:
+This performs:
+- OpenTofu apply
+- GKE credential download
+- Kubernetes context setup
 
-Local
-  ↓
-AWS
-  ↓
-GCP
+Deploy workloads:
 
-with minimal application changes.
+make deploy-gcp
 
----
+This deploys:
+- Go service
+- Swift service
+- Envoy proxy
+- Kubernetes services
 
-## TODO
+Configure DNS:
 
-Platform
+make dns-gcp
 
-[x] Add Envoy routing layer
-[x] Add path-based routing
-[x] Add Prometheus metrics
-[x] Create local Kubernetes deployment
-[x] Add Makefile automation
+This waits for the GCP LoadBalancer IP and updates Cloudflare automatically.
 
-Monitoring
+View cluster status:
 
-[ ] Auto-generate Prometheus configs
-[ ] Grafana dashboards
-[ ] Alerting
-[ ] Migration dashboards
+make status-gcp
 
-Clients
+View pods and services:
 
-[ ] Raspberry Pi traffic generators
-[ ] Client deployment automation
-[ ] Load migration testing
+make pods-gcp
 
-Cloud
+View outputs:
 
-[ ] AWS deployment workflow
-[ ] GCP deployment workflow
-[ ] OpenTofu automation
-[ ] Cross-cloud migration testing
+make outputs-gcp
 
-Performance
+Destroy infrastructure:
 
-[ ] Load generation
-[ ] Autoscaling
-[ ] Traffic migration testing
-[ ] 10K req/sec validation
+make down-gcp
 
 ---
 
-## License
+## Useful Kubernetes Commands
 
-MIT
+Current context:
+
+kubectl config current-context
+
+View nodes:
+
+kubectl get nodes
+
+View pods:
+
+kubectl get pods
+
+View services:
+
+kubectl get svc
+
+View all resources:
+
+kubectl get all
+
+Restart Envoy:
+
+kubectl rollout restart deployment/envoy
+
+Restart Go service:
+
+kubectl rollout restart deployment/go-server
+
+Restart Swift service:
+
+kubectl rollout restart deployment/swift-server
+
+---
+
+## Load Testing
+
+Install hey:
+
+brew install hey
+
+Run tests:
+
+hey -n 1000 -c 25 http://gcp.captalien.io/go
+
+hey -n 1000 -c 25 http://gcp.captalien.io/swift
+
+hey -n 100 -c 10 "http://gcp.captalien.io/go/fib?n=35"
+
+hey -n 100 -c 10 "http://gcp.captalien.io/swift/fib?n=35"
+
+Monitor cluster during testing:
+
+kubectl top pods
+
+kubectl top nodes
+
+---
+
+## Current Features
+
+- Multi-language services (Go and Swift)
+- Envoy path-based routing
+- Recursive Fibonacci workload endpoint
+- Prometheus-compatible metrics
+- Cloudflare DNS automation
+- OpenTofu infrastructure provisioning
+- AWS EKS deployment
+- GCP GKE deployment
+- Kubernetes context automation
+- Public cloud deployment URL
+
+---
+
+## Next Steps
+
+### Observability
+
+- Deploy Prometheus to GKE
+- Deploy Grafana to GKE
+- Expose Grafana at grafana.captalien.io
+- Create service dashboards
+- Build latency visualizations
+- Add alerting
+
+### OpenTelemetry
+
+- Deploy OTel Collector
+- Instrument Go service
+- Instrument Swift service
+- Add distributed tracing
+- Evaluate Tempo or Jaeger
+
+### Platform Engineering
+
+- Automated container builds
+- CI/CD pipeline
+- Authentication layer
+- Horizontal Pod Autoscaling
+- Multi-cloud failover
+- Canary deployments
+
+---
+
+## Learning Goals
+
+This project is intended to demonstrate practical experience with:
+
+- Site Reliability Engineering (SRE)
+- Kubernetes
+- Platform Engineering
+- Infrastructure as Code
+- OpenTofu / Terraform
+- Cloud Networking
+- Envoy
+- Cloudflare DNS
+- Observability
+- OpenTelemetry
+- Multi-cloud Deployments
+- Production Operations
+
+
+
+Current State:
+- Envoy admin interface exposed for observability lab work
+
+Future Improvements:
+- Move Envoy admin endpoint to internal-only ClusterIP service
+- Add authentication
+- Restrict access with NetworkPolicies

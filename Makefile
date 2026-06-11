@@ -156,3 +156,32 @@ outputs-gcp:
 
 context-gcp:
 	kubectl config use-context stateless-app-gcp
+
+###################################################
+# Monitoring
+
+deploy-monitoring-gcp: context-gcp
+	kubectl apply -k k8s/monitoring/base
+	kubectl rollout status deployment/prometheus
+	kubectl get pods
+	kubectl get svc
+
+deploy-monitoring-aws: context-aws
+	kubectl apply -k k8s/monitoring/base
+	kubectl rollout status deployment/prometheus
+	kubectl get pods
+	kubectl get svc
+
+forward-prometheus-gcp: context-gcp
+	kubectl port-forward svc/prometheus 9090:9090
+
+forward-prometheus-aws: context-aws
+	kubectl port-forward svc/prometheus 9090:9090
+
+status-monitoring-gcp: context-gcp
+	kubectl get pods
+	kubectl get svc
+
+status-monitoring-aws: context-aws
+	kubectl get pods
+	kubectl get svc

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-admin
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: envoy
+
+  ports:
+    - name: admin
+      port: 9901
+      targetPort: 9901
