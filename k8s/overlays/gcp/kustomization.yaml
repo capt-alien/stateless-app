@@ -5,6 +5,44 @@ images:
   - name: go-server
     newName: us-west1-docker.pkg.dev/stateless-app-498021/stateless-app-go/stateless-app-go
     newTag: latest
+
   - name: swift-server
     newName: us-west1-docker.pkg.dev/stateless-app-498021/stateless-app-swift/stateless-app-swift
     newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: go-server
+    patch: |-
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: kubernetes.io/arch
+            operator: Equal
+            value: arm64
+            effect: NoSchedule
+
+  - target:
+      kind: Deployment
+      name: swift-server
+    patch: |-
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: kubernetes.io/arch
+            operator: Equal
+            value: arm64
+            effect: NoSchedule
+
+  - target:
+      kind: Deployment
+      name: envoy
+    patch: |-
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: kubernetes.io/arch
+            operator: Equal
+            value: arm64
+            effect: NoSchedule
