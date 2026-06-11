@@ -129,8 +129,13 @@ deploy-gcp: context-gcp
 	kubectl get svc
 
 dns-gcp: context-gcp
+	@echo "Waiting for GCP LoadBalancer IP..."
+	@while [ -z "$$(kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" ]; do \
+		echo "Still waiting for envoy-lb external IP..."; \
+		sleep 5; \
+	done
 	$(eval GCP_LB_IP := $(shell kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].ip}'))
-	@test -n "$(GCP_LB_IP)" || (echo "ERROR: envoy-lb IP not found" && exit 1)
+	@echo "Using GCP LoadBalancer IP: $(GCP_LB_IP)"
 	cd infra/gcp && TF_VAR_gcp_lb_ip="$(GCP_LB_IP)" tofu apply
 
 down-gcp:
