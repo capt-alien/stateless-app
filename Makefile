@@ -5,18 +5,25 @@ export
 endif
 
 CLUSTER_NAME ?= migration-lab
+
 GCP_PROJECT_ID ?= stateless-app-498021
 GCP_ZONE ?= us-central1-a
 GCP_CLUSTER_NAME ?= stateless-app-gke
+GO_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-go/stateless-app-go:latest
+SWIFT_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-swift/stateless-app-swift:latest
 
 env-set:
 	cp templates/sample.env .env
 
-connect-local:
-	$(MAKE) forward-local
-
 ###################################################
-# Local Deployment
+# Local
+#
+# Bring up local:
+#   make up-local
+#   make forward-local
+#   make test-local
+###################################################
+
 up-local:
 	docker build -t go-server:latest -f services/go/Dockerfile .
 	docker build -t swift-server:latest ./services/swift
@@ -33,7 +40,17 @@ down-local:
 forward-local:
 	kubectl port-forward --address 0.0.0.0 svc/envoy-lb 8080:80
 
+connect-local:
+	$(MAKE) forward-local
+
+context-local:
+	kubectl config use-context kind-$(CLUSTER_NAME)
+
 status-local:
+	kubectl get pods
+	kubectl get svc
+
+pods-local: context-local
 	kubectl get pods
 	kubectl get svc
 
@@ -54,73 +71,23 @@ test-local:
 	@echo "\n--- Swift Metrics ---"
 	curl localhost:8080/swift/metrics
 
-pods-local: context-local
-	kubectl get pods
-	kubectl get svc
-
-context-local:
-	kubectl config use-context kind-$(CLUSTER_NAME)
 
 ###################################################
-# AWS Deployment
-plan-aws:
-	cd infra/aws && tofu plan
-
-up-aws:
-	cd infra/aws && tofu apply
-	aws eks update-kubeconfig \
-		--region us-west-2 \
-		--name stateless-app-eks \
-		--alias stateless-app-aws
-
-deploy-aws: context-aws
-	kubectl apply -k k8s/overlays/aws
-	kubectl rollout status deployment/go-server
-	kubectl rollout status deployment/swift-server
-	kubectl rollout status deployment/envoy
-	kubectl get pods
-	kubectl get svc
-
-dns-aws: context-aws
-	$(eval AWS_LB_HOSTNAME := $(shell kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'))
-	@test -n "$(AWS_LB_HOSTNAME)" || (echo "ERROR: envoy-lb hostname not found" && exit 1)
-	cd infra/aws && TF_VAR_aws_lb_hostname="$(AWS_LB_HOSTNAME)" tofu apply
-
-down-aws:
-	cd infra/aws && tofu destroy \
-		-target=aws_eks_node_group.stateless_app \
-		-target=aws_eks_cluster.stateless_app
-
-status-aws: context-aws
-	kubectl get nodes
-	kubectl get pods -A
-
-pods-aws: context-aws
-	kubectl get pods
-	kubectl get svc
-
-outputs-aws:
-	cd infra/aws && tofu output
-
-context-aws:
-	kubectl config use-context stateless-app-aws
-
+# GCP
+#
+# Bring up GCP app + monitoring:
+#   make up-gcp
+#   make deploy-gcp
+#   make deploy-monitoring-gcp
+#   make dns-gcp
+#
+# Validate:
+#   curl http://gcp.captalien.io/go
+#   open http://grafana.captalien.io
+#
+# Tear down expensive GCP resources:
+#   make down-gcp
 ###################################################
-# GCP Deployment
-GO_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-go/stateless-app-go:latest
-SWIFT_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-swift/stateless-app-swift:latest
-
-build-go-gcp:
-	docker build --platform linux/arm64 -t $(GO_GCP_IMAGE) -f services/go/Dockerfile .
-
-push-go-gcp:
-	docker push $(GO_GCP_IMAGE)
-
-release-go-gcp: build-go-gcp push-go-gcp context-gcp
-	kubectl rollout restart deployment/go-server
-	kubectl rollout status deployment/go-server
-
-
 
 plan-gcp:
 	cd infra/gcp && tofu plan
@@ -143,6 +110,14 @@ deploy-gcp: context-gcp
 	kubectl get pods
 	kubectl get svc
 
+deploy-monitoring-gcp: context-gcp
+	kubectl apply -k k8s/monitoring/base
+	kubectl rollout status deployment/prometheus
+	kubectl rollout status deployment/grafana
+	kubectl rollout status deployment/otel-collector
+	kubectl get pods
+	kubectl get svc
+
 dns-gcp: context-gcp
 	@echo "Waiting for GCP LoadBalancer IP..."
 	@while [ -z "$$(kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" ]; do \
@@ -153,10 +128,23 @@ dns-gcp: context-gcp
 	@echo "Using GCP LoadBalancer IP: $(GCP_LB_IP)"
 	cd infra/gcp && TF_VAR_gcp_lb_ip="$(GCP_LB_IP)" tofu apply
 
+build-go-gcp:
+	docker build --platform linux/arm64 -t $(GO_GCP_IMAGE) -f services/go/Dockerfile .
+
+push-go-gcp:
+	docker push $(GO_GCP_IMAGE)
+
+release-go-gcp: build-go-gcp push-go-gcp context-gcp
+	kubectl rollout restart deployment/go-server
+	kubectl rollout status deployment/go-server
+
 down-gcp:
 	cd infra/gcp && tofu destroy \
 		-target=google_container_node_pool.primary_nodes \
 		-target=google_container_cluster.primary
+
+context-gcp:
+	kubectl config use-context stateless-app-gcp
 
 status-gcp: context-gcp
 	kubectl get nodes
@@ -169,16 +157,45 @@ pods-gcp: context-gcp
 outputs-gcp:
 	cd infra/gcp && tofu output
 
-context-gcp:
-	kubectl config use-context stateless-app-gcp
+forward-prometheus-gcp: context-gcp
+	kubectl port-forward svc/prometheus 9090:9090
+
+forward-grafana-gcp: context-gcp
+	kubectl port-forward svc/grafana 3000:3000
+
+status-monitoring-gcp: context-gcp
+	kubectl get pods
+	kubectl get svc
+
 
 ###################################################
-# Monitoring
-deploy-monitoring-gcp: context-gcp
-	kubectl apply -k k8s/monitoring/base
-	kubectl rollout status deployment/prometheus
-	kubectl rollout status deployment/grafana
-	kubectl rollout status deployment/otel-collector
+# AWS
+#
+# Bring up AWS app + monitoring:
+#   make up-aws
+#   make deploy-aws
+#   make deploy-monitoring-aws
+#   make dns-aws
+#
+# Tear down expensive AWS resources:
+#   make down-aws
+###################################################
+
+plan-aws:
+	cd infra/aws && tofu plan
+
+up-aws:
+	cd infra/aws && tofu apply
+	aws eks update-kubeconfig \
+		--region us-west-2 \
+		--name stateless-app-eks \
+		--alias stateless-app-aws
+
+deploy-aws: context-aws
+	kubectl apply -k k8s/overlays/aws
+	kubectl rollout status deployment/go-server
+	kubectl rollout status deployment/swift-server
+	kubectl rollout status deployment/envoy
 	kubectl get pods
 	kubectl get svc
 
@@ -186,22 +203,37 @@ deploy-monitoring-aws: context-aws
 	kubectl apply -k k8s/monitoring/base
 	kubectl rollout status deployment/prometheus
 	kubectl rollout status deployment/grafana
+	kubectl rollout status deployment/otel-collector
 	kubectl get pods
 	kubectl get svc
 
-forward-prometheus-gcp: context-gcp
-	kubectl port-forward svc/prometheus 9090:9090
+dns-aws: context-aws
+	$(eval AWS_LB_HOSTNAME := $(shell kubectl get svc envoy-lb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'))
+	@test -n "$(AWS_LB_HOSTNAME)" || (echo "ERROR: envoy-lb hostname not found" && exit 1)
+	cd infra/aws && TF_VAR_aws_lb_hostname="$(AWS_LB_HOSTNAME)" tofu apply
+
+down-aws:
+	cd infra/aws && tofu destroy \
+		-target=aws_eks_node_group.stateless_app \
+		-target=aws_eks_cluster.stateless_app
+
+context-aws:
+	kubectl config use-context stateless-app-aws
+
+status-aws: context-aws
+	kubectl get nodes
+	kubectl get pods -A
+
+pods-aws: context-aws
+	kubectl get pods
+	kubectl get svc
+
+outputs-aws:
+	cd infra/aws && tofu output
 
 forward-prometheus-aws: context-aws
 	kubectl port-forward svc/prometheus 9090:9090
 
-status-monitoring-gcp: context-gcp
-	kubectl get pods
-	kubectl get svc
-
 status-monitoring-aws: context-aws
 	kubectl get pods
 	kubectl get svc
-
-forward-grafana-gcp: context-gcp
-	kubectl port-forward svc/grafana 3000:3000
