@@ -109,7 +109,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (job, path) (\n  rate(\n    {__name__=~\"go_requests_total|swift_requests_total\"}[1m]\n  )\n)",
+          "expr": "sum by (job, path) (\n  rate({__name__=~\"go_requests_total|swift_requests_total\", path=~\"/|/go|/swift|/fib|/health|/metrics\"}[1m])\n)",
           "legendFormat": "{{source}} {{path}}",
           "range": true,
           "refId": "A"
@@ -188,8 +188,10 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -204,7 +206,7 @@
         {
           "editorMode": "code",
           "expr": "sum by (job, path) (\n  {__name__=~\"go_requests_total|swift_requests_total\", path=~\"/|/go|/swift|/fib|/health|/metrics\"}\n)",
-          "legendFormat": "{{job}} {{path}}",
+          "legendFormat": "{{source}} {{path}}",
           "range": true,
           "refId": "A"
         }
@@ -265,8 +267,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(go_requests_total{path=~\"/|/go|/fib|/health|/metrics\"})",
-          "legendFormat": "go-local",
+          "expr": "sum(go_requests_total)",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -327,7 +329,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(swift_requests_total{path=~\"/|/swift|/fib|/health|/metrics\"})",
+          "expr": "sum(swift_requests_total)",
           "legendFormat": "swift-local",
           "range": true,
           "refId": "A"
@@ -563,6 +565,6 @@
   "timezone": "",
   "title": "stateless-app Local Migration Lab",
   "uid": "stateless-app-local",
-  "version": 7,
+  "version": 6,
   "weekStart": ""
 }
