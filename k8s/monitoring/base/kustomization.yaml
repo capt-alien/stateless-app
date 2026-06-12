@@ -8,4 +8,6 @@ resources:
   - envoy-admin-service.yaml
   - grafana-service.yaml
   - grafana-datasource.yaml
+  - grafana-dashboard-provider.yaml
+  - grafana-dashboards-configmap.yaml
   - grafana-deployment.yaml
