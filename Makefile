@@ -163,6 +163,7 @@ deploy-monitoring-gcp: context-gcp
 	kubectl apply -k k8s/monitoring/base
 	kubectl rollout status deployment/prometheus
 	kubectl rollout status deployment/grafana
+	kubectl rollout status deployment/otel-collector
 	kubectl get pods
 	kubectl get svc
 

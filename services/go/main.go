@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,12 +10,13 @@ import (
 	"time"
 
 	"stateless-app/services/go/metrics"
+	"stateless-app/services/go/tracing"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-
 	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
 
 	hostname, _ := os.Hostname()
@@ -22,6 +24,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		name = "world"
 	}
+
 	clientIP := r.RemoteAddr
 	log.Println("request from:", clientIP)
 
@@ -39,7 +42,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-
 	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
 
 	clientIP := r.RemoteAddr
@@ -53,12 +55,10 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
 	json.NewEncoder(w).Encode(resp)
 }
 
 func fibHandler(w http.ResponseWriter, r *http.Request) {
-
 	metrics.Requests.WithLabelValues(r.URL.Path).Inc()
 
 	n := 35
@@ -79,9 +79,7 @@ func fibHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start := time.Now()
-
 	result := fib(n)
-
 	duration := time.Since(start)
 
 	log.Printf("fib request n=%d duration=%s", n, duration)
@@ -95,7 +93,6 @@ func fibHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -103,17 +100,39 @@ func fib(n int) int {
 	if n <= 1 {
 		return n
 	}
+
 	return fib(n-1) + fib(n-2)
 }
 
 func main() {
+	ctx := context.Background()
 
 	metrics.Init()
 
+	shutdown := tracing.InitTracer(ctx, "go-server")
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Printf("failed to shutdown tracer provider: %v", err)
+		}
+	}()
+
 	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/fib", fibHandler)
-	http.HandleFunc("/", homeHandler)
+
+	http.Handle("/health", otelhttp.NewHandler(
+		http.HandlerFunc(healthHandler),
+		"go-server-health",
+	))
+
+	http.Handle("/fib", otelhttp.NewHandler(
+		http.HandlerFunc(fibHandler),
+		"go-server-fib",
+	))
+
+	http.Handle("/", otelhttp.NewHandler(
+		http.HandlerFunc(homeHandler),
+		"go-server-home",
+	))
+
 	log.Println("starting go-server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: otel-collector
+
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+
+    spec:
+      tolerations:
+        - effect: NoSchedule
+          key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
+
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.115.1
+
+          args:
+            - "--config=/etc/otelcol-contrib/otel-collector-config.yaml"
+
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+
+            - name: otlp-http
+              containerPort: 4318
+
+            - name: metrics
+              containerPort: 8889
+
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /etc/otelcol-contrib
+
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: otel-collector-config
