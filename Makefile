@@ -159,16 +159,17 @@ context-gcp:
 
 ###################################################
 # Monitoring
-
 deploy-monitoring-gcp: context-gcp
 	kubectl apply -k k8s/monitoring/base
 	kubectl rollout status deployment/prometheus
+	kubectl rollout status deployment/grafana
 	kubectl get pods
 	kubectl get svc
 
 deploy-monitoring-aws: context-aws
 	kubectl apply -k k8s/monitoring/base
 	kubectl rollout status deployment/prometheus
+	kubectl rollout status deployment/grafana
 	kubectl get pods
 	kubectl get svc
 
@@ -185,3 +186,6 @@ status-monitoring-gcp: context-gcp
 status-monitoring-aws: context-aws
 	kubectl get pods
 	kubectl get svc
+
+forward-grafana-gcp: context-gcp
+	kubectl port-forward svc/grafana 3000:3000

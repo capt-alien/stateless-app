@@ -6,3 +6,6 @@ resources:
   - prometheus-deployment.yaml
   - prometheus-service.yaml
   - envoy-admin-service.yaml
+  - grafana-service.yaml
+  - grafana-datasource.yaml
+  - grafana-deployment.yaml
