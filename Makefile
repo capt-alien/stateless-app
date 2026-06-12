@@ -107,6 +107,21 @@ context-aws:
 
 ###################################################
 # GCP Deployment
+GO_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-go/stateless-app-go:latest
+SWIFT_GCP_IMAGE ?= us-west1-docker.pkg.dev/$(GCP_PROJECT_ID)/stateless-app-swift/stateless-app-swift:latest
+
+build-go-gcp:
+	docker build --platform linux/arm64 -t $(GO_GCP_IMAGE) -f services/go/Dockerfile .
+
+push-go-gcp:
+	docker push $(GO_GCP_IMAGE)
+
+release-go-gcp: build-go-gcp push-go-gcp context-gcp
+	kubectl rollout restart deployment/go-server
+	kubectl rollout status deployment/go-server
+
+
+
 plan-gcp:
 	cd infra/gcp && tofu plan
 
