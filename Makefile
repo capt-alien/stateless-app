@@ -115,6 +115,7 @@ deploy-monitoring-gcp: context-gcp
 	kubectl rollout status deployment/prometheus
 	kubectl rollout status deployment/grafana
 	kubectl rollout status deployment/otel-collector
+	kubectl rollout status deployment/tempo
 	kubectl get pods
 	kubectl get svc
 
@@ -204,6 +205,7 @@ deploy-monitoring-aws: context-aws
 	kubectl rollout status deployment/prometheus
 	kubectl rollout status deployment/grafana
 	kubectl rollout status deployment/otel-collector
+	kubectl rollout status deployment/tempo
 	kubectl get pods
 	kubectl get svc
 

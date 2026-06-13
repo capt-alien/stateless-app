@@ -5,15 +5,15 @@ resources:
   - prometheus-config.yaml
   - prometheus-deployment.yaml
   - prometheus-service.yaml
-
   - grafana-datasource.yaml
   - grafana-dashboard-provider.yaml
   - grafana-dashboards-configmap.yaml
   - grafana-deployment.yaml
   - grafana-service.yaml
-
   - envoy-admin-service.yaml
-
   - otel-collector-config.yaml
   - otel-collector-deployment.yaml
   - otel-collector-service.yaml
+  - tempo-config.yaml
+  - tempo-deployment.yaml
+  - tempo-service.yaml
