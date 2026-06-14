@@ -30,6 +30,17 @@ data:
 
                     stat_prefix: ingress_http
 
+                    tracing:
+                      provider:
+                        name: envoy.tracers.zipkin
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+                          collector_cluster: zipkin_collector
+                          collector_endpoint: "/api/v2/spans"
+                          collector_endpoint_version: HTTP_JSON
+                          trace_id_128bit: true
+                          shared_span_context: false
+
                     route_config:
                       name: local_route
 
@@ -47,7 +58,8 @@ data:
                                 cluster: grafana_service
 
                         - name: backend
-                          domains: ["*"]
+                          domains:
+                            - "*"
 
                           routes:
 
@@ -86,6 +98,22 @@ data:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
       clusters:
+
+        - name: zipkin_collector
+          connect_timeout: 0.25s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+
+          load_assignment:
+            cluster_name: zipkin_collector
+
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: otel-collector
+                          port_value: 9411
 
         - name: go_service
           connect_timeout: 0.25s

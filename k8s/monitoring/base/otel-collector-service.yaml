@@ -1,3 +1,5 @@
+# File: k8s/monitoring/base/otel-collector-service.yaml
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -17,6 +19,10 @@ spec:
     - name: otlp-http
       port: 4318
       targetPort: 4318
+
+    - name: zipkin
+      port: 9411
+      targetPort: 9411
 
     - name: metrics
       port: 8889
