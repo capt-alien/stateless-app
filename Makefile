@@ -168,6 +168,16 @@ status-monitoring-gcp: context-gcp
 	kubectl get pods
 	kubectl get svc
 
+build-swift-gcp:
+	docker build --platform linux/arm64 -t $(SWIFT_GCP_IMAGE) ./services/swift
+
+push-swift-gcp:
+	docker push $(SWIFT_GCP_IMAGE)
+
+release-swift-gcp: build-swift-gcp push-swift-gcp context-gcp
+	kubectl rollout restart deployment/swift-server
+	kubectl rollout status deployment/swift-server
+
 
 ###################################################
 # AWS

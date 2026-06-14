@@ -1,5 +1,11 @@
+// File: services/swift/Sources/main.swift
+
 import Vapor
 import Foundation
+
+import OpenTelemetryApi
+import OpenTelemetrySdk
+import OpenTelemetryProtocolExporterHttp
 
 actor MetricsStore {
     private var requestCounts: [String: Int] = [:]
@@ -23,7 +29,28 @@ actor MetricsStore {
     }
 }
 
+func initializeTracing() {
+    let exporter = OtlpHttpTraceExporter(
+        endpoint: URL(string: "http://otel-collector:4318/v1/traces")!
+    )
+
+    let processor = SimpleSpanProcessor(spanExporter: exporter)
+
+    let tracerProvider = TracerProviderBuilder()
+        .add(spanProcessor: processor)
+        .with(resource: Resource(attributes: [
+            "service.name": AttributeValue.string("swift-server")
+        ]))
+        .build()
+
+    OpenTelemetry.registerTracerProvider(tracerProvider: tracerProvider)
+
+    print("otel tracer initialized for service=swift-server endpoint=http://otel-collector:4318/v1/traces")
+}
+
 let metrics = MetricsStore()
+
+initializeTracing()
 
 let app = try Application(.detect())
 defer { app.shutdown() }
@@ -60,11 +87,18 @@ func fib(_ n: Int) -> Int {
     return fib(n - 1) + fib(n - 2)
 }
 
+
 app.get("fib") { req async throws -> [String: String] in
+    let tracer = OpenTelemetry.instance.tracerProvider.get(
+        instrumentationName: "swift-server"
+    )
+    let span = tracer.spanBuilder(spanName: "swift-server-fib").startSpan()
+    defer {
+        span.end()
+    }
+
     await metrics.increment(path: "/fib")
-
     let n = req.query[Int.self, at: "n"] ?? 35
-
     if n < 1 || n > 45 {
         throw Abort(.badRequest, reason: "n must be between 1 and 45")
     }

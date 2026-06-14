@@ -15,7 +15,7 @@ spec:
       containers:
         - name: swift-server
           image: swift-server:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8081
 ---

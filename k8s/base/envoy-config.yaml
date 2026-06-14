@@ -36,7 +36,9 @@ data:
                       virtual_hosts:
 
                         - name: grafana
-                          domains: ["grafana.captalien.io"]
+                          domains:
+                            - "grafana.captalien.io"
+                            - "grafana.captalien.io:*"
 
                           routes:
                             - match:
